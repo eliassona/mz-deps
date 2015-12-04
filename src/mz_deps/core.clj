@@ -1,5 +1,6 @@
 (ns mz_deps.core
   (:use [clojure.set])
+  (:require [clojure.xml :refer [emit]])
   (:import [java.io File])
   (:gen-class))
 
@@ -42,9 +43,10 @@
       (filter (fn [s] (not (.isEmpty s))) 
               (map #(.trim %) (.split (slurp f) "\n"))))))
 
-(use 'clojure.xml)
 
-(defn add-test-jars [jars]
+(defn add-test-jars 
+  "Add extra jars that are needed for testing etc."
+  [jars]
   (conj jars "mediationzone/packages/ultra/build/jars/testsupport/mz-ULTRA-testsupport.jar"
              "mediationzone/core/lib/core_testsupport.jar" 
              "mediationzone/picostart/build/jars/testsupport/mz-PICOSTART-testsupport.jar"
@@ -60,7 +62,9 @@
       true)
     ))
 
-(defn assoc-source-path [m package-dir root-dir]
+(defn assoc-source-path 
+  "assoc source path for all jars that have source"
+  [m package-dir root-dir]
   (let [{:keys [kind path]} m
         assoc-fn 
         (fn [sp] 
@@ -76,12 +80,9 @@
           (assoc-fn sp))
 		    (let [sp (File. (format "%s-sources.jar" (.substring path 0 (- (count path) 4))))]
           (assoc-fn sp)))
-      "con"
-      m
-      "src"
-      m
-      "output"
-      m
+      "con" m
+      "src" m
+      "output" m
     )))
 
 (defn emit-classpath
@@ -106,7 +107,8 @@
 (defn emit-cp-for!
   "Emits the xml for eclipse .classpath.
    For example:
-   (emit-cp-for 'package/couchbase') ;this will update 'package/couchbase/.classpath'
+   cd to the component and the type
+   (emit-cp-for) ;this will update 'package/couchbase/.classpath'
    For test-ng in eclipse: One solution to this problem (at least it worked for me) is to go to Window -> Preferences -> TestNG and uncheck Use project TestNG jar.
   "
   []
