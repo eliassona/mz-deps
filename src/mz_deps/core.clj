@@ -52,7 +52,8 @@
              "mediationzone/picostart/build/jars/testsupport/mz-PICOSTART-testsupport.jar"
 ;             "mediationzone/installation/build/jars/main/mz-INSTALLATION-main.jar"
              "runtime/java/testng-6.0.1/testng-6.0.1.jar" 
-             "runtime/java/mockito-1.9.5/mockito-all-1.9.5.jar" 
+             "runtime/java/mockito-1.9.5/mockito-all-1.9.5.jar"
+             "runtime/java/hamcrest/hamcrest-all-1.3.0RC2.jar"
              "runtime/java/scalatest/2.2.1/scalatest_2.11-2.2.1.jar"))
 (defn src-dir-exists? [package-dir]
   (fn [[kind path]]
@@ -111,14 +112,16 @@
    (emit-cp-for) ;this will update 'package/couchbase/.classpath'
    For test-ng in eclipse: One solution to this problem (at least it worked for me) is to go to Window -> Preferences -> TestNG and uncheck Use project TestNG jar.
   "
-  []
+  ([package-dir]
   (let [mz (.getParentFile (File. mz-home))
         root (.getParentFile mz)
-        package-dir (File. ".")
         f (first (build-log-files package-dir))
         cp (File. package-dir ".classpath")]
     (println (format "Overwriting %s" (.getAbsolutePath cp)))
     (spit cp (with-out-str (emit-classpath (parsed-content-of f) package-dir root)))
+    ))
+  ([]
+    (emit-cp-for! (File. "."))
     ))
 
 (defn make-classpath-files 
