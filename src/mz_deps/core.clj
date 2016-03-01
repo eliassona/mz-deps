@@ -54,7 +54,7 @@
              "runtime/java/testng-6.0.1/testng-6.0.1.jar" 
              "runtime/java/mockito-1.9.5/mockito-all-1.9.5.jar"
              "runtime/java/hamcrest/hamcrest-all-1.3.0RC2.jar"
-             "runtime/java/scalatest/2.2.1/scalatest_2.11-2.2.1.jar"
+             "runtime/tools/scalatest/2.2.6/scalatest_2.11-2.2.6.jar" 
              "runtime/java/apache-ant-1.9.1/lib/ant.jar"
              "runtime/java/easymock-3.0/easymock-3.0.jar"
              "runtime/java/clojure/clojure-1.6.0/clojure-1.6.0.jar"))
