@@ -1,17 +1,20 @@
 (ns mz_deps.core
   (:use [clojure.set]
         [clojure.pprint])
-  (:require [clojure.xml :refer [emit]])
+  (:require [clojure.xml :refer [emit]]
+            [clojure.spec :as s]
+            [clojure.spec.test :as test]
+            [clojure.string :as str])
   (:import [java.io File])
   (:gen-class))
 
-(def mz-home 
-  (if-let [v (if-let [mz (java.lang.System/getenv "MZ_HOME")]
-               mz
-               (java.lang.System/getProperty "mz.home"))]
-    v
-    (throw (IllegalStateException. "mz-home is not set!")
-    )))
+(def mz-home "/Users/anderse/src/mz-dev/mz-main/mediationzone/core"
+  #_(if-let [v (if-let [mz (java.lang.System/getenv "MZ_HOME")]
+                mz
+                (java.lang.System/getProperty "mz.home"))]
+     v
+     (throw (IllegalStateException. "mz-home is not set!")
+     )))
 
 
 (defn build-log-files 
@@ -145,4 +148,10 @@
   )
 
 
+(defn my-index-of [source search & opts]
+  (apply str/index-of source search opts))
+(s/fdef my-index-of
+        :args (s/cat :source string? :search string?)
+        :ref nat-int?
+        :fn #(<= (:ret %) (-> % :args :source count)))
 
