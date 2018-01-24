@@ -123,4 +123,7 @@
    :deps (abs-deps-of (ast-build->clj (parser (comment/clean (slurp (format "%s/%s/build.gradle" mz-home dir))) :start :context)))})
 
 
-
+(comment 
+  (pprint (all-paths "packages/redis2"))
+  (pprint (all-paths "packages/ultra_gpb"))
+  )

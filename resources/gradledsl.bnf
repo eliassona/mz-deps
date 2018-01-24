@@ -16,7 +16,7 @@ property = ((strLit | ident) (optional-space <'='> optional-space value)) | dep-
 dep-style = ident space (strLit | dependency)
 dependency = mz-dep | unit-dep
 mz-dep = <'mzDependency'> <'('> strLit (<','> optional-space map-item)*<')'>
-unit-dep = <'unitDependency'> <'('> optional-space (map-item | ((map-item optional-space <','> optional-space)+ map-item)) optional-space <')'>
+unit-dep = <'unitDependency'> <'('> optional-space (strLit | map-item | ((map-item optional-space <','> optional-space)+ map-item)) optional-space <')'>
 map-item = ident optional-space <':'> optional-space strLit
 value = (strLit | symbol | array | map)
-context = closure | property
+context = closure | property | value
