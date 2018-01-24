@@ -12,6 +12,11 @@ charValue = #"[^\n]"
 charEscape = <'\\'> ( "a" | "b" | "f" | "n" | "r" | "t" | "v" | '\\' | "\'" | '\"' ) 
 symbol = charValue*
 array = <'['> optional-space (value | ((value optional-space <','> optional-space)* value)) optional-space <']'>
-property = (strLit | ident) optional-space <'='> optional-space value 
+property = ((strLit | ident) (optional-space <'='> optional-space value)) | dep-style
+dep-style = ident space (strLit | dependency)
+dependency = mz-dep | unit-dep
+mz-dep = <'mzDependency'> <'('> strLit (<','> optional-space map-item)*<')'>
+unit-dep = <'unitDependency'> <'('> optional-space (map-item | ((map-item optional-space <','> optional-space)+ map-item)) optional-space <')'>
+map-item = ident optional-space <':'> optional-space strLit
 value = (strLit | symbol | array | map)
 context = closure | property
