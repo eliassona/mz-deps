@@ -4,6 +4,17 @@
 decimalDigit = #'[0-9]'
 octalDigit   = #'[0-7]'
 hexDigit     = #'[0-9a-fA-F]'
+intLit     = decimalLit | octalLit | hexLit
+decimalLit = #'[1-9]' { decimalDigit }
+octalLit   = "0" { octalDigit }
+hexLit     = "0" ( "x" | "X" ) hexDigit { hexDigit } 
+
+
+floatLit = ( decimals "." [ decimals ] [ exponent ] | decimals exponent | "."decimals [ exponent ] ) | "inf" | "nan"
+decimals  = decimalDigit { decimalDigit }
+exponent  = ( "e" | "E" ) [ "+" | "-" ] decimals 
+
+boolLit = "true" | "false" 
 ident = (letter { letter | decimalDigit | "_" | "-"}) | "_"
 closure = (ident | strLit) optional-space <'{'> (optional-space (context | ((context optional-space)* context)) optional-space) | optional-space <'}'> optional-space
 map = <'{'> optional-space (property | ((property space)* property)) optional-space <'}'>
@@ -19,4 +30,13 @@ mz-dep = <'mzDependency'> <'('> strLit (<','> optional-space map-item)*<')'>
 unit-dep = <'unitDependency'> <'('> optional-space (strLit | map-item | ((map-item optional-space <','> optional-space)+ map-item)) optional-space <')'>
 map-item = ident optional-space <':'> optional-space strLit
 value = (strLit | symbol | array | map)
-context = closure | property | value
+context = closure | property
+
+expressions = {expr optional-space}
+expr = func-app | array | assignment | intLit | floatLit
+assignment = ident optional-space <'='> optional-space expr
+func-app = func-name [optional-space args] | [optional-space block] | [optional-space args optional-space block]
+func-app1 = func-name | (func-name optional-space args) | (func-name space expr)
+args = <'('> <')'> 
+func-name = (ident | strLit)
+block = <'{'> expressions <'}'>
