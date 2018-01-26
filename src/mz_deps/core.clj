@@ -8,6 +8,12 @@
   (:import [java.io File])
   (:gen-class))
 
+
+(defmacro dbg [body]
+  `(let [x# ~body]
+     (println "dbg:" '~body "=" x#)
+     x#))
+
 (def mz-home "/Users/anderse/src/mz-dev/mz-main/mediationzone/core"
   #_(if-let [v (if-let [mz (java.lang.System/getenv "MZ_HOME")]
                 mz
