@@ -18,27 +18,27 @@
 (def mz-main (-> mz-home File. .getParentFile .getAbsolutePath))
 
 
-
-
-
-
-
 (defn src-path-of [dir]
-   (map (fn [d] (.getAbsolutePath d)) (filter #(.isDirectory %) (.listFiles (File. dir "src")))))
+   (map (fn [d] (format "src/%s/java" (.getName (.getParentFile d)))) (filter #(and (.exists %) (.isDirectory %)) (map #(File. % "java") (.listFiles (File. dir "src"))))))
 
-(defn path-entry-of [kind e] {:tag :classpathentry :attrs {:kind kind, :path e}})
+(defn path-entry-of [kind e]
+  {:tag :classpathentry :attrs {:kind kind, :path e}})
 
 (defn src-entry-of [e] (path-entry-of "src" e))
+
+(defn file-exists? [fn] (.exists (File. fn)))
+
 
 (defn emit-classpath [dir]
   (let [deps (File. dir "dependencies.edn")
         _ (assert (.exists deps))
-        deps (-> deps slurp read-string)]
+        deps (filter file-exists? (-> deps slurp read-string))]
     (emit {:tag :classpath 
          :content
          (concat
-           (conj (map src-entry-of (src-path-of dir)) 
-                 (src-entry-of (File. dir "test/src"))
+           (conj (map src-entry-of  (src-path-of dir)) 
+                 (src-entry-of "test/src")
+                 (path-entry-of "output" "idebuild/classes")
                  (path-entry-of "con" "org.eclipse.jdt.launching.JRE_CONTAINER")
                  (path-entry-of "con" "org.scala-ide.sdt.launching.SCALA_CONTAINER"))
            (map (partial path-entry-of "lib") deps)
