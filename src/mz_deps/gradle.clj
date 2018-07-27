@@ -62,7 +62,7 @@
 ;def writeDeps() {;
 ;	file('./dependencies.edn').withWriter('UTF-8') { writer ->
 ;	   writer.write '['
-;	   project.configurations.testRuntime.each { 
+;	   project.configurations.testRuntimeClasspath.each { 
 ;			writer.write '"'
 ;			writer.write it.getAbsolutePath()
 ;			writer.write '"'
