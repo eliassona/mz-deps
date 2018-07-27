@@ -1,16 +1,37 @@
 (ns mz_deps.totaldeps
-  (:require [clojure.set :refer [union]])
+  (:require [clojure.set :refer [union]]
+            [clojure.data.json :as json]
+            [clj-http.client :as client]
+            [clojure.inspector :refer [inspect inspect-table ]]
+            [hiccup.table :refer [to-table1d]]
+            [hiccup.core :refer [html]])
   (:use [clojure.pprint])
-  (:import [java.io File FileFilter]))
+  (:import [java.io File FileFilter]
+           [java.util.jar JarFile]))
 
 (defmacro dbg [body]
   `(let [x# ~body]
      (println "dbg:" '~body "=" x#)
      x#))
 
+(defn maven-search "Search info about an artifact like for example 'jedis'" [name]
+  ((-> (client/get (format "http://search.maven.org/solrsearch/select?q=%s&rows=10000&wt=json" name)) :body json/read-str) "response")) 
+
+(defn latest-version-of 
+  "Get the latest version of an artifact like for example 'jedis', the id is the group id and name concatenated with a colon, for example 'redis.clients:jedis'"
+  [maven-id]
+  (let [res ((maven-search maven-id) "docs")]
+    (map #(% "latestVersion") res)))
+
+
 (def mz-core (File. "/Users/anderse/src/mz-dev/mz-main/mediationzone/core"))
 
 (def mz-home (-> mz-core .getParentFile))
+
+(def mz-home 
+  (if-let [mz (get (System/getenv) "PROJECT_HOME")]
+    (File. mz)
+    (throw (IllegalStateException. "PROJECT_HOME is not set"))))
 
 (def mz-root (-> mz-home .getParentFile))
 
@@ -42,7 +63,7 @@
 
 (defn is-3pp? [p] (.startsWith p runtime-path))
 
-(def jar-set-3pp "A set of all 3pp jars" (filter is-3pp? jar-set))
+(def jar-set-3pp "A set of all 3pp jars" (set (filter is-3pp? jar-set)))
 
 (defmacro try-wrapper [code]
   `(try 
@@ -50,13 +71,25 @@
      (catch Exception e#
        "Couldn't figure out this info")))
 
+(defn mf-attrs-of [path]
+  (if-let [mf (-> path JarFile. .getManifest)]
+    (-> mf .getMainAttributes)))
+
+(defn maven-id-of [path]
+  (if-let [attrs (mf-attrs-of path)]
+    (-> attrs (.getValue "Bundle-SymbolicName"))))
+
 (defn detail-info-of [jar pks]
   (let [name-version-ix (.lastIndexOf jar "-")
-        name-start (inc (.lastIndexOf jar "/"))]
+        name-start (inc (.lastIndexOf jar "/"))
+        name (try-wrapper (.substring jar name-start name-version-ix))
+        maven-id (maven-id-of jar)]
     {:used-in-package (set pks), 
      :jar-file jar, 
-     :name (try-wrapper (.substring jar name-start name-version-ix)), 
-     :version (try-wrapper (.substring jar (inc name-version-ix) (.lastIndexOf jar ".")))})) 
+     :name name, 
+     :version (try-wrapper (.substring jar (inc name-version-ix) (.lastIndexOf jar ".")))
+     :maven-id maven-id
+     :latest-version (try-wrapper (latest-version-of (if maven-id maven-id name)))})) 
 
 (defn jar-usage-of [jar]
   (detail-info-of jar (filter #(contains? (dep-map %) jar) (keys dep-map))))
@@ -72,3 +105,21 @@
   (let [rs (regex-search s)]
     (filter #(rs (:jar-file %)) jar-usage)))
 
+(def jar-filter (reify FileFilter (accept [_ f] (and (.isFile f) (.endsWith (.getAbsolutePath f) ".jar")))))
+
+
+(defn unused-jars []
+  (let [rt-jars (map #(.getAbsolutePath %) (mapcat #(.listFiles % jar-filter) (all-dirs-of mz-runtime)))]
+    (dbg (count rt-jars))
+    (filter (complement (partial contains? jar-set-3pp)) rt-jars)))
+
+
+(defn jar-usage->html []
+  (html 
+    (to-table1d jar-usage 
+    [:used-in-package "Used in Package", 
+     :jar-file "Jar", 
+     :name "Name", 
+     :version "Version" 
+     :maven-id "Maven Id", 
+     :latest-version "Latest Version"])))
