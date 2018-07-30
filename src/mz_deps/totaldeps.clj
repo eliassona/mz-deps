@@ -79,13 +79,17 @@
   (if-let [attrs (mf-attrs-of path)]
     (-> attrs (.getValue "Bundle-SymbolicName"))))
 
+(defn strip-path [p]
+  (let [l (inc (count runtime-path))]
+    (.substring p l)))
+
 (defn detail-info-of [jar pks]
   (let [name-version-ix (.lastIndexOf jar "-")
         name-start (inc (.lastIndexOf jar "/"))
         name (try-wrapper (.substring jar name-start name-version-ix))
         maven-id (maven-id-of jar)]
     {:used-in-package (set pks), 
-     :jar-file jar, 
+     :jar-file (strip-path jar), 
      :name name, 
      :version (try-wrapper (.substring jar (inc name-version-ix) (.lastIndexOf jar ".")))
      :maven-id maven-id
@@ -115,11 +119,14 @@
 
 
 (defn jar-usage->html []
-  (html 
-    (to-table1d jar-usage 
-    [:used-in-package "Used in Package", 
-     :jar-file "Jar", 
-     :name "Name", 
-     :version "Version" 
-     :maven-id "Maven Id", 
-     :latest-version "Latest Version"])))
+  (let [attr-fns {:table-layout "auto" }]  
+    (html 
+      (to-table1d jar-usage 
+      [:jar-file "Jar", 
+       :name "Name", 
+       :version "Version" 
+       :maven-id "Maven Id", 
+       :latest-version "Latest Version"
+       :used-in-package "Used in Package", 
+       ]
+      attr-fns))))

@@ -27,7 +27,14 @@ You can look at all dependencies at once by typing:
 ```
 But that's probably overwelming!
 
-See how many jars are unused
+You could dump the whole thing to an html table:
+```clojure 
+=> (spit "~/tmp/deps.html" (jar-usage->html))
+nil
+```
+
+
+See how many jars are unused. Note! unused by the production code. They could still be used by some tool.
 ```clojure
 => (count (unused-jars))
 2295
