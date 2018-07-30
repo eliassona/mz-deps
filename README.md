@@ -32,7 +32,17 @@ You could dump the whole thing to an html table:
 => (spit "~/tmp/deps.html" (jar-usage->html))
 nil
 ```
+Or to json.
+```clojure 
+=> (spit "/Users/anderse/tmp/deps.json" (json/json-str jar-usage))
+nil
+```
 
+You can search for soemething like this:
+```clojure 
+=> (search-for "jedis")
+nil
+```
 
 See how many jars are unused. Note! unused by the production code. They could still be used by some tool.
 ```clojure
