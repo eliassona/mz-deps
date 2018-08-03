@@ -33,9 +33,31 @@
     (File. mz)
     (throw (IllegalStateException. "PROJECT_HOME is not set"))))
 
+(def installed-home 
+  (if-let [mz (get (System/getenv) "MZ_HOME")]
+    (File. mz)
+    (throw (IllegalStateException. "MZ_HOME is not set"))))
+
+(def common-lib (File. installed-home "common/lib"))
+
+(defn ends-with-filter [suffix] 
+  (reify FileFilter (accept [_ f] (and (.isFile f) (.endsWith (.getAbsolutePath f) suffix)))))
+
+(def jar-filter (ends-with-filter ".jar"))
+
+(def mzp-filter (ends-with-filter ".mzp"))
+
+
+(def common-lib-set (set (.listFiles common-lib jar-filter)))
+
 (def mz-root (-> mz-home .getParentFile))
 
 (def mz-runtime (File. mz-root "runtime"))
+
+(def mzp-home (File. installed-home "codeserver/packages/active"))
+
+(def mzp-set (set  (.listFiles mzp-home mzp-filter)))
+
 
 (def dir-filter (reify FileFilter (accept [_ f] (.isDirectory f))))
 
@@ -83,6 +105,7 @@
   (let [l (inc (count runtime-path))]
     (.substring p l)))
 
+
 (defn detail-info-of [jar pks]
   (let [name-version-ix (.lastIndexOf jar "-")
         name-start (inc (.lastIndexOf jar "/"))
@@ -105,11 +128,11 @@
     (fn [s] (.matches s p))))
       
 
-(defn search-for [s]
+(defn search-for 
+  [s]
   (let [rs (regex-search s)]
     (filter #(rs (:jar-file %)) jar-usage)))
 
-(def jar-filter (reify FileFilter (accept [_ f] (and (.isFile f) (.endsWith (.getAbsolutePath f) ".jar")))))
 
 
 (defn unused-jars []

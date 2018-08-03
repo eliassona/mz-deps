@@ -10,6 +10,7 @@
                  [org.clojure/data.json "0.2.6"]
                  [hiccup-table "0.2.0"]
                  [hiccup "1.0.5"]
+                 
                  ]
   :java-source-paths ["java/src"]
 
