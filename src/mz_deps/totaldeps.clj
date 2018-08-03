@@ -28,15 +28,17 @@
 
 (def mz-home (-> mz-core .getParentFile))
 
-(def mz-home 
-  (if-let [mz (get (System/getenv) "PROJECT_HOME")]
-    (File. mz)
-    (throw (IllegalStateException. "PROJECT_HOME is not set"))))
+(def installed-home "/Users/anderse/src/mz-dev/mz-main/mediationzone/mzhomes/anders")
 
-(def installed-home 
-  (if-let [mz (get (System/getenv) "MZ_HOME")]
-    (File. mz)
-    (throw (IllegalStateException. "MZ_HOME is not set"))))
+#_(def mz-home 
+   (if-let [mz (get (System/getenv) "PROJECT_HOME")]
+     (File. mz)
+     (throw (IllegalStateException. "PROJECT_HOME is not set"))))
+
+#_(def installed-home 
+   (if-let [mz (get (System/getenv) "MZ_HOME")]
+     (File. mz)
+     (throw (IllegalStateException. "MZ_HOME is not set"))))
 
 (def common-lib (File. installed-home "common/lib"))
 
@@ -50,6 +52,7 @@
 
 (def common-lib-set (set (.listFiles common-lib jar-filter)))
 
+(def common-lib-set-names (set (map #(.getName %) common-lib-set)))
 (def mz-root (-> mz-home .getParentFile))
 
 (def mz-runtime (File. mz-root "runtime"))
@@ -57,7 +60,6 @@
 (def mzp-home (File. installed-home "codeserver/packages/active"))
 
 (def mzp-set (set  (.listFiles mzp-home mzp-filter)))
-
 
 (def dir-filter (reify FileFilter (accept [_ f] (.isDirectory f))))
 
@@ -83,9 +85,11 @@
 
 (def runtime-path (.getAbsolutePath mz-runtime))
 
-(defn is-3pp? [p] (.startsWith p runtime-path))
+(defn is-3pp? [p] (not (.startsWith p (.getAbsolutePath mz-home))))
 
 (def jar-set-3pp "A set of all 3pp jars" (set (filter is-3pp? jar-set)))
+(def jar-set-3pp-names "A set of all 3pp jar names" (set (map #(.getName (File. %)) jar-set-3pp)))
+
 
 (defmacro try-wrapper [code]
   `(try 
@@ -93,8 +97,12 @@
      (catch Exception e#
        "Couldn't figure out this info")))
 
+(defn jar->mf [path]
+  (-> path JarFile. .getManifest)
+  )
+
 (defn mf-attrs-of [path]
-  (if-let [mf (-> path JarFile. .getManifest)]
+  (if-let [mf (jar->mf path)]
     (-> mf .getMainAttributes)))
 
 (defn maven-id-of [path]
@@ -102,9 +110,36 @@
     (-> attrs (.getValue "Bundle-SymbolicName"))))
 
 (defn strip-path [p]
-  (let [l (inc (count runtime-path))]
-    (.substring p l)))
+  p
+  #_(let [l (inc (count runtime-path))]
+     (.substring p l)))
+(defn only-3pp? [n]
+  (contains? jar-set-3pp-names (.getName (File. n)))) 
 
+(defn mzp->packaged-3pp-jars 
+  "List all 3pp jars packaged in this mzp"
+  [mzp]
+  (set 
+    (map #(.getName (File. %)) (filter #(and (.endsWith % "jar") (only-3pp? %)) (keys (.getEntries (jar->mf mzp)))))))
+
+(def mzp->packed-3pp-jar-map "A map of mzps and their packaged 3pp jar"
+  (into {} (map (fn [x] [x (mzp->packaged-3pp-jars x)]) mzp-set)))
+
+(defn jar->mzp "Which mzp(s) is this jar contained in" [jar]
+  (set (map first (filter (fn [e] (contains? (val e) jar)) mzp->packed-3pp-jar-map))))
+
+(defn kind-of [jar]
+  (let [common (contains? common-lib-set-names jar)
+        mzp (jar->mzp jar)]
+    (cond
+      (and common (not (empty? mzp)))
+      [:common mzp]
+      common
+      :common
+      (not (empty? mzp))
+      mzp
+      :else
+      :none)))
 
 (defn detail-info-of [jar pks]
   (let [name-version-ix (.lastIndexOf jar "-")
@@ -112,16 +147,21 @@
         name (try-wrapper (.substring jar name-start name-version-ix))
         maven-id (maven-id-of jar)]
     {:used-in-package (set pks), 
-     :jar-file (strip-path jar), 
+     :jar-file (strip-path (dbg jar)), 
      :name name, 
      :version (try-wrapper (.substring jar (inc name-version-ix) (.lastIndexOf jar ".")))
      :maven-id maven-id
+     :kind (kind-of (.getName (File. jar)))
      :latest-version (try-wrapper (latest-version-of (if maven-id maven-id name)))})) 
 
 (defn jar-usage-of [jar]
   (detail-info-of jar (filter #(contains? (dep-map %) jar) (keys dep-map))))
 
-(def jar-usage (map jar-usage-of jar-set-3pp))
+(def jar-usage 
+  "A list of maps containing info about each 3pp jar" 
+  (map jar-usage-of jar-set-3pp))
+
+
 
 (defn regex-search [p] 
   (let [p (format "(?i).*%s.*" p)]
@@ -129,6 +169,7 @@
       
 
 (defn search-for 
+  "Search for a string contained in the jar filename"
   [s]
   (let [rs (regex-search s)]
     (filter #(rs (:jar-file %)) jar-usage)))
